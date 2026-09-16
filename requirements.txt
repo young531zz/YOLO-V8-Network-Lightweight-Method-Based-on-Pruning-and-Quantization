@@ -1,0 +1,15 @@
+ultralytics>=8.0.186
+torch>=2.0
+torchvision
+numpy
+opencv-python
+tqdm
+pyyaml
+onnx>=1.13
+onnxruntime
+onnxsim
+# TensorRT INT8 (optional, NVIDIA GPU required)
+# tensorrt
+# nvidia-polygraphy
+# pycuda
+jupyter
