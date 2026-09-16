@@ -97,7 +97,7 @@ yolov8-prune-quant/
 └── README.md
 ```
 
-运行后会在本地生成 `weights/`（如 `prune.pt`、`retrain.pt`），这些文件可能超过 25 MB，请留在本地。
+运行后会在本地生成 `weights/`（如 `prune.pt`、`retrain.pt`）。
 
 ---
 
