@@ -1,10 +1,12 @@
 # 基于剪枝与量化的 YOLOv8 轻量化方法
 
-论文 **YOLO V8 Network Lightweight Method Based on Pruning and Quantization**（Cheng, 2024）的代码复现。
+论文 *YOLO V8 Network Lightweight Method Based on Pruning and Quantization*（Cheng, 2024）的代码复现。
 
-> Cheng, Y. (2024). YOLO V8 Network Lightweight Method Based on Pruning and Quantization. *Mathematical Modeling and Algorithm Application*, 3(2), 44–51. ISSN: 3006-0842
+> Cheng, Y. (2024). YOLO V8 Network Lightweight Method Based on Pruning and Quantization. *Mathematical Modeling and Algorithm Application*, 3(2), 44-51. ISSN: 3006-0842
 
 本仓库将原始实验脚本整理为两个可运行 notebook，分别对应论文 Figure 2（剪枝）与 Figure 3（量化）。
+
+**请勿上传权重。** `*.pt` / `*.onnx` / `*.engine` 以及训练产物都不纳入版本库。`yolov8n.pt` 在运行 notebook 时由 Ultralytics 自动下载。
 
 ---
 
@@ -14,21 +16,18 @@
 
 ### 1. 稀疏训练
 
-对 BN 层尺度 \(\gamma\) 与偏置 \(\beta\) 施加 L1 约束（论文公式 5–9）：
+对 BN 层尺度 γ 与偏置 β 施加 L1 约束（论文公式 5–9）：
 
-\[
-L = \sum \ell(f(x), y) + \lambda_1 \sum |\gamma| + \lambda_2 \sum |\beta|
-\]
+```
+L  = Σ ℓ(f(x), y) + λ1 · Σ |γ| + λ2 · Σ |β|
+λ1 = 0.01 × (1 - 0.9 × e / ne)
+```
 
-\[
-\lambda_1 = 0.01 \times (1 - 0.9 \cdot e / n_e)
-\]
-
-实现上通过 Ultralytics 的 `optimizer_step` 补丁完成，**不修改** ultralytics 源码。
+其中 e 为当前 epoch，ne 为总 epoch 数。实现上通过 Ultralytics 的 `optimizer_step` 补丁完成，不修改 ultralytics 源码。
 
 ### 2. 结构化通道剪枝
 
-以 BN 的 \(|\gamma|\) 作为通道重要性。\(\gamma \approx 0\) 的通道及其上下游卷积核会被删除。
+以 BN 的 |γ| 作为通道重要性。γ 接近 0 的通道及其上下游卷积核会被删除。
 
 论文指定的可剪位置（YOLOv8n）：
 
@@ -44,10 +43,10 @@ L = \sum \ell(f(x), y) + \lambda_1 \sum |\gamma| + \lambda_2 \sum |\beta|
 
 剪枝后将 float32 权重与激活量化为 int8。论文使用 min-max（公式 10–11）：
 
-\[
-q = \frac{x - \min}{\max - \min} \times 255, \quad
-x = \frac{q \times (\max - \min)}{255} + \min
-\]
+```
+q = (x - min) / (max - min) × 255
+x = q × (max - min) / 255 + min
+```
 
 部署框架为 NVIDIA TensorRT（`IInt8MinMaxCalibrator`）。
 
@@ -59,18 +58,18 @@ x = \frac{q \times (\max - \min)}{255} + \min
 
 **表 1 — 剪枝**
 
-| | GFLOPs | 参数量 | Acc |
-|---|---:|---:|---:|
-| 剪枝前 | 8.7 | 3,151,904 | 0.771 |
-| 剪枝后 | 5.8 | 2,536,321 | 0.722 |
-| 重训练 | — | — | 0.754 |
+|        | GFLOPs | 参数量      | Acc   |
+|--------|--------:|------------:|------:|
+| 剪枝前 | 8.7     | 3,151,904   | 0.771 |
+| 剪枝后 | 5.8     | 2,536,321   | 0.722 |
+| 重训练 | —       | —           | 0.754 |
 
 **表 2 — TensorRT INT8**
 
-| | Engine 体积 | 速度 | Acc |
-|---|---:|---:|---:|
-| 量化前 | 20.1 MB | 53.5 ms | 0.754 |
-| 量化后 | 7.2 MB | 205 ms | 0.722 |
+|        | Engine 体积 | 速度    | Acc   |
+|--------|------------:|--------:|------:|
+| 量化前 | 20.1 MB     | 53.5 ms | 0.754 |
+| 量化后 | 7.2 MB      | 205 ms  | 0.722 |
 
 剪枝 + 量化后压缩率约 **64.2%**，精度约下降 **4.2%**。
 
@@ -79,6 +78,8 @@ x = \frac{q \times (\max - \min)}{255} + \min
 ---
 
 ## 仓库结构
+
+上传 GitHub 时只需下面这些文件（合计约 1–2 MB）。不要把 `weights/`、`runs/`、`datasets/` 或任何 `.pt/.onnx/.engine` 一并上传。
 
 ```
 yolov8-prune-quant/
@@ -90,11 +91,13 @@ yolov8-prune-quant/
 │   ├── prune.py                   # 通道剪枝
 │   ├── int8_trt.py                # min-max TensorRT INT8
 │   └── eval_utils.py
-├── weights/                       # 导出模型（不纳入版本库）
 ├── paper.pdf
 ├── requirements.txt
+├── .gitignore
 └── README.md
 ```
+
+运行后会在本地生成 `weights/`（如 `prune.pt`、`retrain.pt`），这些文件可能超过 25 MB，请留在本地。
 
 ---
 
@@ -119,7 +122,7 @@ DATA = "coco.yaml"   # 需自行准备 COCO 2017
 
 ## 复现步骤
 
-在 `notebooks/` 下打开 Jupyter，或从仓库根目录启动：
+从仓库根目录启动：
 
 ```bash
 jupyter notebook notebooks/01_sparse_prune.ipynb
@@ -128,11 +131,11 @@ jupyter notebook notebooks/01_sparse_prune.ipynb
 **Notebook 01**
 
 1. 对 `yolov8n.pt` 做 BN L1 稀疏训练
-2. 按 \(\gamma\) 阈值剪通道，保存 `weights/prune.pt`
-3. 重训练得到 `weights/retrain.pt`
+2. 按 γ 阈值剪通道，保存到本地 `weights/prune.pt`
+3. 重训练得到本地 `weights/retrain.pt`
 4. 对比参数量 / GFLOPs / mAP（对应表 1）
 
-**Notebook 02**（依赖 01 的 `retrain.pt`）
+**Notebook 02**（依赖 01 在本地生成的 `retrain.pt`）
 
 1. 导出 ONNX
 2. 使用 Ultralytics TensorRT INT8，或论文同款 min-max 标定
@@ -150,9 +153,9 @@ jupyter notebook notebooks/01_sparse_prune.ipynb
 | `prune.py` | BN 通道剪枝，现为 `src/prune.py` |
 | `prune_train.py` / `compare.py` | 重训练与表 1 对比，现为 notebook 01 |
 | `int8.py` / `trt_int8_quantization_yolo8.py` | TensorRT INT8，现为 notebook 02 |
-| `yolov8-pytorch_quantization-main/` | PTQ/QAT 额外实现，**不属于**论文主流程 |
+| `yolov8-pytorch_quantization-main/` | PTQ/QAT 额外实现，不属于论文主流程 |
 
-本仓库不包含完整 Ultralytics 源码、训练日志或权重文件。
+本仓库不包含完整 Ultralytics 源码、训练日志或权重文件。也不要上传旁边的 `ultralytics-main/` 工程。
 
 ---
 
