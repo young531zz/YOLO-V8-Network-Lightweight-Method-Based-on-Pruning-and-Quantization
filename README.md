@@ -68,8 +68,8 @@ x = q × (max - min) / 255 + min
 
 |        | Engine 体积 | 速度    | Acc   |
 |--------|------------:|--------:|------:|
-| 量化前 | 20.1 MB     | 53.5 ms | 0.754 |
-| 量化后 | 7.2 MB      | 205 ms  | 0.722 |
+| 量化前 | 20.1 MB     | 205 ms | 0.754 |
+| 量化后 | 7.2 MB      | 53.5 ms  | 0.722 |
 
 剪枝 + 量化后压缩率约 **64.2%**，精度约下降 **4.2%**。
 
@@ -120,7 +120,7 @@ DATA = "coco.yaml"   # 需自行准备 COCO 2017
 
 ---
 
-## 复现步骤
+## 复现
 
 从仓库根目录启动：
 
@@ -141,21 +141,10 @@ jupyter notebook notebooks/01_sparse_prune.ipynb
 2. 使用 Ultralytics TensorRT INT8，或论文同款 min-max 标定
 3. 对比 engine 体积、时延、mAP（对应表 2）
 
-快速跑通流程：保持 notebook 开头的 `QUICK_DEMO = True`（少量 epoch）。对齐论文设置：改为 `QUICK_DEMO = False`。
+
 
 ---
 
-## 原始代码对应关系
-
-| 原始文件 | 作用 |
-|---|---|
-| `ultralytics/.../trainer.py`（被注释的 L1） | 稀疏训练，现为 `src/sparsity.py` |
-| `prune.py` | BN 通道剪枝，现为 `src/prune.py` |
-| `prune_train.py` / `compare.py` | 重训练与表 1 对比，现为 notebook 01 |
-| `int8.py` / `trt_int8_quantization_yolo8.py` | TensorRT INT8，现为 notebook 02 |
-| `yolov8-pytorch_quantization-main/` | PTQ/QAT 额外实现，不属于论文主流程 |
-
-本仓库不包含完整 Ultralytics 源码、训练日志或权重文件。也不要上传旁边的 `ultralytics-main/` 工程。
 
 ---
 
